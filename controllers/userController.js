@@ -32,7 +32,7 @@ exports.logIn = async (req, res) => {
   if (error) return res.status(400).send(error.details[0].message);
 
   const foundUser = await User.findOne({ email: req.body.email }); //returns the first document that matches the query criteria or null
-  if (!foundUser) return res.status(400).send({ message: "invalid login credential" });
+  if (!foundUser) return res.status(400).send({ message: "email doesnt exist" });
 
   try {
     const isMatch = await bcrypt.compareSync(req.body.password, foundUser.password);
@@ -43,7 +43,7 @@ exports.logIn = async (req, res) => {
 
     return res.status(200).header("auth-token", token).send({ "auth-token": token, userId: foundUser._id });
   } catch (error) {
-    return res.status(400).send(error);
+    return res.status(400).send((error.message));
   }
 };
 
