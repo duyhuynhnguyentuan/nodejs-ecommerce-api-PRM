@@ -14,7 +14,7 @@
     "url": "http://giftmbanda.com"
   },
 
-  "host": "localhost:3000",
+  "host": "nodejs-ecommerce-api-prm.onrender.com",
 
   "schemes": ["https"],
 
