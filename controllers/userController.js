@@ -8,21 +8,20 @@ const User = require("../models/userModel");
 const { registerValidation, loginValidation } = require("../middleware/validation");
 const JWT_KEY = process.env.JWT_KEY;
 
-
 // signup
 exports.signUp = async (req, res, next) => {
   const { error, value } = registerValidation(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const emailExist = await User.findOne({ email: req.body.email }); //returns the first document that matches the query criteria or null
-  if (emailExist) return res.status(400).send({ message: "Email already exist!" });
+  const emailExist = await User.findOne({ email: req.body.email });
+  if (emailExist) return res.status(400).send({ message: "Email already exists!" });
 
   try {
     const newUser = await createUserObj(req);
     const savedUser = await User.create(newUser);
     return res.status(200).send({ message: "User created successfully!", user: savedUser });
   } catch (err) {
-    return res.status(400).send({ error: "User created successfully!", error: err });
+    return res.status(400).send({ error: "Failed to create user", error: err });
   }
 };
 
@@ -31,33 +30,32 @@ exports.logIn = async (req, res) => {
   const { error } = loginValidation(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
-  const foundUser = await User.findOne({ email: req.body.email }); //returns the first document that matches the query criteria or null
-  if (!foundUser) return res.status(400).send({ message: "email doesnt exist" });
+  const foundUser = await User.findOne({ email: req.body.email });
+  if (!foundUser) return res.status(400).send({ message: "Email doesn't exist" });
 
   try {
     const isMatch = await bcrypt.compareSync(req.body.password, foundUser.password);
-    if (!isMatch) return res.status(400).send({ message: "invalid login credential" });
+    if (!isMatch) return res.status(400).send({ message: "Invalid login credentials" });
 
     // create and assign jwt
     const token = await jwt.sign({ _id: foundUser._id }, JWT_KEY);
 
     return res.status(200).header("auth-token", token).send({ "auth-token": token, userId: foundUser._id });
   } catch (error) {
-    return res.status(400).send((error.message));
+    return res.status(400).send(error.message);
   }
 };
 
 // Update user
 exports.updateUser = async (req, res) => {
   try {
-    req.body.password = bcrypt.hashSync(req.body.password, 10); //encrypt the password before updating
+    req.body.password = bcrypt.hashSync(req.body.password, 10);
     const updatedUser = await User.findByIdAndUpdate(req.params.userId, { $set: req.body }, { new: true });
 
     if (!updatedUser) {
       return res.status(400).send({ message: "Could not update user" });
     }
     return res.status(200).send({ message: "User updated successfully", updatedUser });
-
   } catch (error) {
     return res.status(400).send({ error: "An error has occurred, unable to update user" });
   }
@@ -66,7 +64,7 @@ exports.updateUser = async (req, res) => {
 // Delete user
 exports.deleteUser = async (req, res) => {
   try {
-    const deletedUser = await User.findByIdAndDelete(req.params.userId); // the `await` is very important here!
+    const deletedUser = await User.findByIdAndDelete(req.params.userId);
 
     if (!deletedUser) {
       return res.status(400).send({ message: "Could not delete user" });
@@ -77,13 +75,17 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
+// Get user data
 exports.data = async (req, res) => {
-  return res.json({
-    posts: {
-      title: "User Authentication",
-      description: "random data you can access because you\'re authenticated",
-    },
-  });
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+    return res.status(200).send(user);
+  } catch (error) {
+    return res.status(400).send({ error: "An error has occurred, unable to fetch user data" });
+  }
 };
 
 const createUserObj = async (req) => {
