@@ -76,17 +76,28 @@ exports.deleteUser = async (req, res) => {
 };
 
 // Get user data
+// Get user data
 exports.data = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
-    return res.status(200).send(user);
+
+    // Extract necessary fields
+    const userData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone
+    };
+
+    return res.status(200).send(userData);
   } catch (error) {
     return res.status(400).send({ error: "An error has occurred, unable to fetch user data" });
   }
 };
+
 
 const createUserObj = async (req) => {
   return {
